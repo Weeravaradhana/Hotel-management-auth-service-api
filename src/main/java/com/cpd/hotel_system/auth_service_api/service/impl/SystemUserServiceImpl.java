@@ -419,33 +419,33 @@ public class SystemUserServiceImpl implements SystemUserService {
 
         }
 
-    @Override
-    public Object userLogin(RequestLoginDto dto) {
-        Optional<SystemUser> selectedUserObj = systemUserRepo.findByEmail(dto.getEmail());
+        @Override
+        public Object userLogin(RequestLoginDto dto) {
+            Optional<SystemUser> selectedUserObj = systemUserRepo.findByEmail(dto.getEmail());
 
-        if(selectedUserObj.isEmpty()){
-            throw new EntryNotFoundException("cant find the associated user");
+            if(selectedUserObj.isEmpty()){
+                throw new EntryNotFoundException("cant find the associated user");
+            }
+
+            SystemUser systemUser = selectedUserObj.get();
+            if(!systemUser.isEmailVerified()){
+                resend(dto.getEmail(), "SIGNUP");
+                throw new UnAuthorizedException("please verify email");
+            }
+
+            MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+            requestBody.add("client_id", "");
+            requestBody.add("grant_type", OAuth2Constants.PASSWORD);
+            requestBody.add("username", dto.getEmail());
+            requestBody.add("client_secret", "");
+            requestBody.add("password", dto.getPassword());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<Object> response = restTemplate.postForEntity("key cloak api url", requestBody, Object.class);
+            return response.getBody();
         }
-
-        SystemUser systemUser = selectedUserObj.get();
-        if(!systemUser.isEmailVerified()){
-            resend(dto.getEmail(), "SIGNUP");
-            throw new UnAuthorizedException("please verify email");
-        }
-
-        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
-        requestBody.add("client_id", "");
-        requestBody.add("grant_type", OAuth2Constants.PASSWORD);
-        requestBody.add("username", dto.getEmail());
-        requestBody.add("client_secret", "");
-        requestBody.add("password", dto.getPassword());
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<Object> response = restTemplate.postForEntity("key cloak api url", requestBody, Object.class);
-        return response.getBody();
-    }
 }
 
 
